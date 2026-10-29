@@ -1,0 +1,20 @@
+{
+  "name": "Мой Цикл — умный менструальный трекер",
+  "short_name": "Мой Цикл",
+  "description": "Автономный трекер цикла с персональными инсайтами. Все данные — только на вашем устройстве.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf2f6",
+  "theme_color": "#f9c6d3",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%23f9c6d3'/><text x='256' y='340' font-size='260' text-anchor='middle'>🌸</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Мой Цикл</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Мой Цикл">
+  <meta name="theme-color" content="#f9c6d3">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23f9c6d3'/><text x='50' y='65' font-size='50' text-anchor='middle'>🌸</text></svg>">
+  <link rel="manifest" href="manifest.json">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --safe: #b6e3c8; --fertile: #a8d8ea; --period: #f4a6b6;
+      --bg-gradient: linear-gradient(160deg, #fdf2f6 0%, #f3e8fa 50%, #e8f6ef 100%);
+      --card-bg: rgba(255,255,255,0.7);
+      --text-main: #374151; --text-sub: #9ca3af;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --safe: #4a8b68; --fertile: #4a7d99; --period: #a85468;
+        --bg-gradient: linear-gradient(160deg, #1a1620 0%, #201826 50%, #16201a 100%);
+        --card-bg: rgba(40,36,48,0.7);
+        --text-main: #e5e7eb; --text-sub: #9ca3af;
+      }
+      body { color: var(--text-main) !important; }
+      .bg-white\/70,.bg-white\/80,.bg-white\/90,.bg-white\/60,.bg-white\/50 { background: var(--card-bg) !important; }
+      .bg-gray-50,.bg-gray-100 { background: rgba(60,56,68,0.5) !important; }
+      .text-gray-700,.text-gray-600,.text-gray-500 { color: var(--text-main) !important; }
+      .text-gray-400 { color: var(--text-sub) !important; }
+      .ring-inner { background: #2a2532 !important; }
+      #ring-progress { background: conic-gradient(var(--ring-color) var(--ring-pct), #2a2532 0) !important; }
+      nav { background: rgba(40,36,48,0.9) !important; }
+      .border-gray-200,.border-gray-100,.border-pink-100 { border-color: rgba(255,255,255,.1) !important; }
+      #modal-overlay > div, #glossary-overlay > div, #whatif-overlay > div { background: #2a2532 !important; }
+      input, textarea { background: #1f1b25 !important; color: var(--text-main) !important; border-color: rgba(255,255,255,.1) !important; }
+      label.bg-gray-50,.bg-pink-50 { background: rgba(60,56,68,0.6) !important; }
+      .bg-yellow-50 { background: rgba(80,70,40,0.4) !important; color: #f0d98a !important; }
+      .insight { background: rgba(40,36,48,0.9) !important; border-color: rgba(255,255,255,.1) !important; }
+      .help-popover { background: #3a3545 !important; color: #e5e7eb !important; }
+    }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg-gradient);
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding-bottom: env(safe-area-inset-bottom);
+      color: var(--text-main);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .ring-wrap { position: relative; width: 240px; height: 240px; }
+    .ring-progress {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(var(--ring-color) var(--ring-pct), #fff 0);
+      transition: background .6s ease;
+    }
+    .ring-inner {
+      position: absolute; inset: 18px; border-radius: 50%;
+      background: #fff; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      box-shadow: inset 0 2px 12px rgba(0,0,0,.05);
+    }
+    .cal-day {
+      aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;
+      border-radius: 12px; cursor: pointer; font-size: 14px;
+      position: relative; transition: transform .1s ease; flex-direction: column;
+    }
+    .cal-day:active { transform: scale(.92); }
+    .cal-day.safe { background: var(--safe); color: #1f5b3a; }
+    .cal-day.fertile { background: var(--fertile); color: #0f4a63; }
+    .cal-day.period { background: var(--period); color: #7a1a2e; }
+    .cal-day.ovulation::after { content: "★"; position: absolute; top: 1px; right: 3px; font-size: 10px; color: #e8a33d; }
+    .cal-day.today { outline: 2px solid #7c5cbf; outline-offset: -2px; }
+    .cal-day.other-month { opacity: .35; }
+    .cal-markers { display: flex; gap: 1px; position: absolute; bottom: 2px; font-size: 8px; line-height: 1; pointer-events: none; }
+
+    .bottom-nav { padding-bottom: calc(env(safe-area-inset-bottom) + 6px); }
+    .nav-btn.active { color: #d0537a; }
+    .nav-btn.active .nav-icon-wrap { background: #fbdbe5; }
+
+    #weight-range-tabs button.active { background: white; box-shadow: 0 1px 3px rgba(0,0,0,.1); color: #d0537a; }
+    @media (prefers-color-scheme: dark) { #weight-range-tabs button.active { background: #3a3545; color: #f0a8bf; } }
+
+    .pf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .pf-table th { text-align: left; padding: 6px 4px; color: var(--text-sub); font-weight: 600; border-bottom: 1px solid rgba(0,0,0,.05); }
+    .pf-table td { padding: 6px 4px; border-bottom: 1px solid rgba(0,0,0,.03); }
+    @media (prefers-color-scheme: dark) { .pf-table th,.pf-table td { border-color: rgba(255,255,255,.08); } }
+    .pf-ok { color: #3d9970; font-weight: 600; }
+    .pf-warn { color: #d97706; font-weight: 600; }
+
+    .insight {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,.05);
+      border-radius: 16px; padding: 12px 14px;
+      font-size: 13px; line-height: 1.45;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .insight-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+
+    .heat-grid { display: grid; gap: 2px; }
+    .heat-cell { aspect-ratio: 1/1; border-radius: 3px; }
+
+    .regularity-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+    .regularity-bar > div { flex: 1; opacity: 0.25; transition: opacity .3s; }
+    .regularity-bar > div.active { opacity: 1; }
+
+    .reminder-banner { background: linear-gradient(90deg, #fde8ef 0%, #f3e8fa 100%); border: 1px solid #f9c6d3; }
+    @media (prefers-color-scheme: dark) { .reminder-banner { background: linear-gradient(90deg, #3a2530 0%, #2e2538 100%); border-color: #4a3a48; } }
+
+    .confidence-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+    .conf-high { background: #d4f0dd; color: #1f5b3a; }
+    .conf-med  { background: #fef3c7; color: #92400e; }
+    .conf-low  { background: #fde2e4; color: #9b1c31; }
+    @media (prefers-color-scheme: dark) {
+      .conf-high { background: #1e4d32; color: #b6e3c8; }
+      .conf-med  { background: #4d3a12; color: #fcd34d; }
+      .conf-low  { background: #4d1a26; color: #f4a6b6; }
+    }
+
+    /* Help-кнопка "?" */
+    .help-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: rgba(0,0,0,.08); color: var(--text-sub);
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      vertical-align: middle; margin-left: 4px; flex-shrink: 0;
+      transition: background .2s;
+    }
+    .help-btn:active { transform: scale(.9); }
+    @media (prefers-color-scheme: dark) { .help-btn { background: rgba(255,255,255,.15); } }
+
+    .help-popover {
+      position: fixed; z-index: 100; max-width: 280px;
+      background: white; color: #374151;
+      padding: 12px 14px; border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+      font-size: 12px; line-height: 1.5;
+      border: 1px solid rgba(0,0,0,.05);
+    }
+
+    /* Glossary tabs */
+    .gloss-tab {
+      padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600;
+      background: rgba(0,0,0,.04); color: var(--text-sub); cursor: pointer; transition: all .2s;
+    }
+    .gloss-tab.active { background: #fbdbe5; color: #d0537a; }
+    @media (prefers-color-scheme: dark) {
+      .gloss-tab { background: rgba(255,255,255,.06); }
+      .gloss-tab.active { background: #4a2530; color: #f0a8bf; }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+
+  <main class="max-w-md mx-auto px-4 pt-6 pb-28">
+
+    <div id="reminder-banner" class="hidden reminder-banner rounded-2xl p-3 mb-4 flex items-center gap-2 text-sm">
+      <span class="text-xl">⚖️</span>
+      <div class="flex-1">
+        <div class="font-semibold" id="reminder-text">Пора внести вес</div>
+        <div class="text-xs opacity-70">Регулярность веса = точность тренда</div>
+      </div>
+      <button id="reminder-dismiss" class="p-1 opacity-50 active:scale-90 transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- ============ ГЛАВНАЯ ============ -->
+    <section id="tab-home" class="tab-content active">
+      <h1 class="text-2xl font-bold text-center mb-1 text-pink-500">Мой Цикл 🌸</h1>
+      <p class="text-center text-sm mb-6" style="color:var(--text-sub)">Сегодня: <span id="today-label"></span></p>
+
+      <div class="flex justify-center mb-4">
+        <div class="ring-wrap">
+          <div class="ring-progress" id="ring-progress" style="--ring-color: #b6e3c8; --ring-pct: 0%"></div>
+          <div class="ring-inner">
+            <div class="text-4xl font-extrabold" id="cycle-day-num">—</div>
+            <div class="text-xs" style="color:var(--text-sub)">день цикла
+              <span class="help-btn" data-help="day-of-cycle">?</span>
+            </div>
+            <div class="mt-2 px-3 py-1 rounded-full text-xs font-semibold" id="status-badge">—</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-center text-base font-medium mb-1">
+        <span id="days-until-label">—</span>
+        <span class="help-btn" data-help="forecast">?</span>
+      </p>
+      <p class="text-center text-xs mb-2" style="color:var(--text-sub)" id="forecast-range-label"></p>
+      <div class="text-center mb-4">
+        <span class="confidence-pill" id="confidence-pill"></span>
+        <span class="help-btn" data-help="confidence">?</span>
+      </div>
+
+      <div id="pms-forecast" class="hidden rounded-2xl p-3 mb-4 text-xs" style="background:rgba(240,201,116,.2); color:#8a6d2a"></div>
+
+      <button id="period-toggle-btn"
+        class="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg active:scale-95 transition mb-4">
+        Месячные начались
+      </button>
+
+      <div id="home-insights" class="space-y-2 mb-4"></div>
+
+      <div class="mt-4 rounded-2xl p-4 text-xs leading-relaxed" style="background:var(--card-bg); color:var(--text-sub)">
+        <p><b>Фертильное окно</b> — 5 дней до овуляции + день овуляции + 1 день после.
+          <span class="help-btn" data-help="fertile">?</span></p>
+        <p class="mt-1">Прогноз адаптируется к вашим данным: свежие циклы весомее, учитывается разброс.
+          <span class="help-btn" data-help="adaptive">?</span></p>
+      </div>
+    </section>
+
+    <!-- ============ КАЛЕНДАРЬ ============ -->
+    <section id="tab-calendar" class="tab-content">
+      <div class="flex items-center justify-between mb-4">
+        <button id="cal-prev" class="p-2 rounded-full active:scale-90 transition" style="background:var(--card-bg)"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+        <h2 class="text-lg font-bold" id="cal-month-label">—</h2>
+        <button id="cal-next" class="p-2 rounded-full active:scale-90 transition" style="background:var(--card-bg)"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+      </div>
+
+      <div id="calendar-container" class="rounded-2xl p-3 shadow-sm" style="background:var(--card-bg)">
+        <div class="grid grid-cols-7 gap-1 text-center text-xs mb-2" style="color:var(--text-sub)">
+          <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+        </div>
+        <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-3 text-xs justify-center" style="color:var(--text-sub)">
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:var(--period)"></span>Месячные</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:var(--fertile)"></span>Фертильные</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded" style="background:var(--safe)"></span>Безопасные</span>
+        <span class="flex items-center gap-1">★ Овуляция</span>
+      </div>
+
+      <div class="mt-3 rounded-xl p-2 text-[10px] text-center leading-relaxed" style="background:var(--card-bg); color:var(--text-sub)">
+        Маркеры: ⚖️ вес · 🌀🎈🤕🔴 симптомы · 😊😢😤😰 настроение · 📝 заметка<br>
+        <span class="opacity-60">Свайп влево/вправо — перелистывание месяца</span>
+      </div>
+    </section>
+
+    <!-- ============ СТАТИСТИКА ============ -->
+    <section id="tab-stats" class="tab-content">
+      <h2 class="text-xl font-bold mb-4 text-purple-500">Статистика 📊</h2>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="rounded-2xl p-4 text-center shadow-sm" style="background:var(--card-bg)">
+          <div class="text-3xl font-extrabold text-pink-500" id="stat-avg-cycle">28</div>
+          <div class="text-xs mt-1" style="color:var(--text-sub)">Средний цикл
+            <span class="help-btn" data-help="avg-cycle">?</span>
+          </div>
+        </div>
+        <div class="rounded-2xl p-4 text-center shadow-sm" style="background:var(--card-bg)">
+          <div class="text-3xl font-extrabold text-purple-500" id="stat-avg-period">5</div>
+          <div class="text-xs mt-1" style="color:var(--text-sub)">Средние месячные
+            <span class="help-btn" data-help="avg-period">?</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl p-4 shadow-sm mb-4" style="background:var(--card-bg)">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-sm font-semibold">Регулярность цикла
+            <span class="help-btn" data-help="regularity">?</span>
+          </h3>
+          <span class="text-xs font-bold" id="regularity-label" style="color:var(--text-sub)">—</span>
+        </div>
+        <div class="regularity-bar" id="regularity-bar">
+          <div style="background:#f4a6b6"></div>
+          <div style="background:#f0c674"></div>
+          <div style="background:#b6e3c8"></div>
+        </div>
+        <p class="text-[11px] mt-2" style="color:var(--text-sub)" id="regularity-desc">Нужно минимум 3 цикла для оценки.</p>
+      </div>
+
+      <div class="rounded-2xl p-4 shadow-sm mb-4" style="background:var(--card-bg)">
+        <h3 class="text-sm font-semibold mb-3">💡 Инсайты
+          <span class="help-btn" data-help="insights">?</span>
+        </h3>
+        <div id="stats-insights" class="space-y-2">
+          <p class="text-xs text-center py-2" style="color:var(--text-sub)">Добавьте больше записей — появятся персональные наблюдения.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl p-4 shadow-sm mb-4" style="background:var(--card-bg)">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h3 class="text-sm font-semibold">Вес
+            <span class="help-btn" data-help="weight">?</span>
+          </h3>
+          <div class="flex gap-1 rounded-lg p-0.5 text-xs" id="weight-range-tabs" style="background:rgba(0,0,0,.05)">
+            <button data-range="30" class="px-2 py-1 rounded-md font-semibold">30д</button>
+            <button data-range="90" class="px-2 py-1 rounded-md">3м</button>
+            <button data-range="180" class="px-2 py-1 rounded-md">6м</button>
+            <button data-range="365" class="px-2 py-1 rounded-md">1г</button>
+            <button data-range="all" class="px-2 py-1 rounded-md">Всё</button>
+          </div>
+        </div>
+        <canvas id="weight-chart" height="200"></canvas>
+        <p id="weight-empty" class="text-xs text-center mt-2 hidden" style="color:var(--text-sub)">Нет данных о весе за выбранный период.</p>
+      </div>
+
+      <div class="rounded-2xl p-4 shadow-sm mb-4" style="background:var(--card-bg)">
+        <h3 class="text-sm font-semibold mb-3">Длительность циклов
+          <span class="help-btn" data-help="cycle-trend">?</span>
+        </h3>
+        <canvas id="cycle-chart" height="180"></canvas>
+        <p id="cycle-empty" class="text-xs text-center mt-2 hidden" style="color:var(--text-sub)">Нужно минимум 2 цикла.</p>
+        <p id="cycle-trend-text" class="text-xs mt-2" style="color:var(--text-sub)"></p>
+      </div>
+
+      <div class="rounded-2xl p-4 shadow-sm mb-4" style="background:var(--card-bg)">
+        <h3 class="text-sm font-semibold mb-1">Карта симптомов и настроения
+          <span class="help-btn" data-help="heatmap">?</span>
+        </h3>
+        <p class="text-[11px] mb-3" style="color:var(--text-sub)">
+          Как часто каждый симптом встречается в конкретный день цикла. Чем ярче — тем чаще.
+        </p>
+        <div id="heatmap-wrap">
+          <p class="text-xs text-center py-2" style="color:var(--text-sub)">Нужно минимум 2 цикла с записями.</p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl p-4 shadow-sm" style="background:var(--card-bg)">
+        <h3 class="text-sm font-semibold mb-3">Прогноз vs Факт
+          <span class="help-btn" data-help="pf">?</span>
+        </h3>
+        <div id="pf-table-wrap">
+          <p class="text-xs text-center py-4" style="color:var(--text-sub)">Пока нет завершённых циклов</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ НАСТРОЙКИ ============ -->
+    <section id="tab-settings" class="tab-content">
+      <h2 class="text-xl font-bold mb-4" style="color:#3d9970">Настройки ⚙️</h2>
+
+      <div class="rounded-2xl p-4 shadow-sm mb-3 text-xs" style="background:var(--card-bg)">
+        <div class="flex justify-between mb-1"><span style="color:var(--text-sub)">Дата рождения:</span><b>25.11.1991</b></div>
+        <div class="flex justify-between"><span style="color:var(--text-sub)">Возраст:</span><b id="age-label">—</b></div>
+        <p class="mt-2 leading-relaxed" style="color:var(--text-sub)">
+          Учитывается для оценки нормы вариабельности цикла. В вашем возрасте разброс до ±7 дней — норма.
+          <span class="help-btn" data-help="age">?</span>
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        <button id="glossary-btn" class="w-full py-4 rounded-2xl shadow-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition" style="background:var(--card-bg)">
+          <i data-lucide="book-open" class="w-5 h-5 text-blue-500"></i> Глоссарий и помощь
+        </button>
+        <button id="whatif-btn" class="w-full py-4 rounded-2xl shadow-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition" style="background:var(--card-bg)">
+          <i data-lucide="git-branch" class="w-5 h-5 text-amber-600"></i> Симулятор «А что если?»
+        </button>
+        <button id="export-btn" class="w-full py-4 rounded-2xl shadow-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition" style="background:var(--card-bg)">
+          <i data-lucide="download" class="w-5 h-5 text-purple-500"></i> Экспорт (JSON)
+        </button>
+        <button id="export-encrypted-btn" class="w-full py-4 rounded-2xl shadow-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition" style="background:var(--card-bg)">
+          <i data-lucide="lock" class="w-5 h-5 text-amber-600"></i> Экспорт с паролем
+        </button>
+        <button id="export-csv-btn" class="w-full py-4 rounded-2xl shadow-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition" style="background:var(--card-bg)">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-green-600"></i> Экспорт в CSV
+        </button>
+        <button id="import-btn" class="w-full py-4 rounded-2xl shadow-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition" style="background:var(--card-bg)">
+          <i data-lucide="upload" class="w-5 h-5 text-pink-500"></i> Импорт
+        </button>
+        <input type="file" id="import-file" accept="application/json,.enc.json" class="hidden" />
+
+        <div class="rounded-2xl p-4 shadow-sm" style="background:var(--card-bg)">
+          <h3 class="text-sm font-semibold mb-2">История циклов</h3>
+          <div id="cycles-list" class="space-y-2 text-sm"></div>
+        </div>
+
+        <div class="bg-yellow-50 border rounded-2xl p-4 text-xs leading-relaxed">
+          <b>⚠️ Важно для iPhone:</b> данные хранятся только в браузере. Регулярно делайте экспорт.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- НАВИГАЦИЯ -->
+  <nav class="fixed bottom-0 left-0 right-0 backdrop-blur border-t z-40 bottom-nav" style="background:rgba(255,255,255,.9); border-color:rgba(0,0,0,.05)">
+    <div class="max-w-md mx-auto grid grid-cols-4">
+      <button class="nav-btn active flex flex-col items-center py-2" style="color:var(--text-sub)" data-tab="home">
+        <span class="nav-icon-wrap p-1.5 rounded-xl"><i data-lucide="home" class="w-5 h-5"></i></span>
+        <span class="text-[10px] mt-0.5">Главная</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center py-2" style="color:var(--text-sub)" data-tab="calendar">
+        <span class="nav-icon-wrap p-1.5 rounded-xl"><i data-lucide="calendar" class="w-5 h-5"></i></span>
+        <span class="text-[10px] mt-0.5">Календарь</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center py-2" style="color:var(--text-sub)" data-tab="stats">
+        <span class="nav-icon-wrap p-1.5 rounded-xl"><i data-lucide="bar-chart-2" class="w-5 h-5"></i></span>
+        <span class="text-[10px] mt-0.5">Статистика</span>
+      </button>
+      <button class="nav-btn flex flex-col items-center py-2" style="color:var(--text-sub)" data-tab="settings">
+        <span class="nav-icon-wrap p-1.5 rounded-xl"><i data-lucide="settings" class="w-5 h-5"></i></span>
+        <span class="text-[10px] mt-0.5">Настройки</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- МОДАЛКА ЗАПИСИ -->
+  <div id="modal-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="rounded-3xl w-full max-w-sm p-5 max-h-[85vh] overflow-y-auto shadow-2xl" style="background:#fff">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg" id="modal-title">Запись</h3>
+        <button id="modal-close" class="p-1 rounded-full active:scale-90"><i data-lucide="x" class="w-5 h-5" style="color:var(--text-sub)"></i></button>
+      </div>
+
+      <div id="existing-log-preview" class="hidden bg-pink-50 rounded-xl p-3 text-xs space-y-1 mb-3">
+        <div class="font-semibold text-pink-600 mb-1">📌 Уже сохранено:</div>
+        <div id="preview-content"></div>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="block text-xs mb-1" style="color:var(--text-sub)">Вес (кг)</label>
+          <input type="number" step="0.1" id="input-weight" placeholder="54.2"
+            class="w-full px-3 py-2 rounded-xl border border-gray-200 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs mb-1" style="color:var(--text-sub)">Симптомы</label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="symptoms" value="Тянет живот"> Тянет живот</label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="symptoms" value="Вздутие"> Вздутие</label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="symptoms" value="Головная боль"> Головная боль</label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="symptoms" value="Прыщи"> Прыщи</label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs mb-1" style="color:var(--text-sub)">Настроение</label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="moods" value="Отличное"> Отличное</label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="moods" value="Грусть"> Грусть</label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="moods" value="Раздражительность"> Раздражительность</label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-gray-50 text-xs"><input type="checkbox" data-group="moods" value="Тревога"> Тревога</label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs mb-1" style="color:var(--text-sub)">Заметки</label>
+          <textarea id="input-notes" rows="3" placeholder="Как вы себя чувствуете?"
+            class="w-full px-3 py-2 rounded-xl border border-gray-200 outline-none resize-none"></textarea>
+        </div>
+
+        <button id="modal-save" class="w-full py-3 rounded-2xl bg-pink-400 text-white font-bold active:scale-95 transition">Сохранить</button>
+
+        <div id="cycle-actions" class="hidden pt-3 border-t border-gray-100 space-y-2">
+          <div class="text-[10px] text-center uppercase tracking-wide" style="color:var(--text-sub)">Коррекция месячных</div>
+          <button id="btn-delete-start" class="w-full py-2.5 rounded-xl bg-red-50 text-red-600 text-sm font-semibold active:scale-95 transition hidden">
+            ❌ Удалить начало месячных (весь цикл)
+          </button>
+          <button id="btn-cancel-end" class="w-full py-2.5 rounded-xl bg-amber-50 text-amber-700 text-sm font-semibold active:scale-95 transition hidden">
+            ↩️ Отменить завершение (цикл снова активен)
+          </button>
+          <button id="btn-add-end" class="w-full py-2.5 rounded-xl bg-purple-50 text-purple-700 text-sm font-semibold active:scale-95 transition hidden">
+            ✅ Отметить этим днём окончание месячных
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ГЛОССАРИЙ -->
+  <div id="glossary-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="rounded-3xl w-full max-w-md p-5 max-h-[85vh] overflow-y-auto shadow-2xl" style="background:#fff">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg">📖 Глоссарий</h3>
+        <button id="glossary-close" class="p-1 rounded-full active:scale-90"><i data-lucide="x" class="w-5 h-5" style="color:var(--text-sub)"></i></button>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button class="gloss-tab active" data-gtab="phases">Фазы цикла</button>
+        <button class="gloss-tab" data-gtab="terms">Термины</button>
+        <button class="gloss-tab" data-gtab="age">Возраст</button>
+        <button class="gloss-tab" data-gtab="how">Как считается</button>
+      </div>
+
+      <div id="gloss-phases" class="gloss-content space-y-4 text-sm leading-relaxed">
+        <div class="p-3 rounded-xl" style="background:rgba(244,166,182,.15)">
+          <div class="font-bold mb-1" style="color:#a83a5a">🩸 Менструальная фаза (дни 1–5)</div>
+          <p>Организм отторгает эндометрий — то, что накопилось в матке для возможной беременности. В эти дни вы чувствуете усталость, могут быть спазмы и низкая энергия. Вес часто снижается, потому что уходит задержавшаяся вода.</p>
+        </div>
+        <div class="p-3 rounded-xl" style="background:rgba(168,216,234,.15)">
+          <div class="font-bold mb-1" style="color:#2a6a8a">🌱 Фолликулярная фаза (от конца месячных до овуляции)</div>
+          <p>В яичнике растёт новый фолликул, эстроген повышается. Энергия растёт, настроение улучшается, кожа становится лучше. Вес стабилен или слегка снижается — это хорошее время для тренировок и активной жизни.</p>
+        </div>
+        <div class="p-3 rounded-xl" style="background:rgba(240,198,116,.15)">
+          <div class="font-bold mb-1" style="color:#8a5f1a">⭐ Овуляция (примерно 1 день)</div>
+          <p>Яйцеклетка выходит из яичника. Это пик фертильности — шанс зачать максимальный. Многие женщины замечают лёгкую боль с одной стороны живота, повышение либидо. Вес может подскочить на 0.5–1 кг — это нормально, задержка воды.</p>
+        </div>
+        <div class="p-3 rounded-xl" style="background:rgba(200,180,220,.15)">
+          <div class="font-bold mb-1" style="color:#5a3a8a">🌙 Лютеиновая фаза (после овуляции, ~14 дней)</div>
+          <p>Жёлтое тело вырабатывает прогестерон и готовит организм к возможной беременности. Если её нет — прогестерон падает, начинаются ПМС и менструация. В этой фазе — <b>вздутие, раздражительность, грусть, тяга к сладкому</b>. Вес может вырасти на 1–2 кг — это <b>вода, не жир</b>, уйдёт с началом месячных.</p>
+          <p class="mt-2 text-xs opacity-70">💡 Лютеиновая фаза у каждой женщины относительно стабильна (~14 дней), а вот фолликулярная — разная. Поэтому циклы у всех разной длины. Приложение считает вашу лютеиновую фазу по факту, а не «−14 от месячных».</p>
+        </div>
+      </div>
+
+      <div id="gloss-terms" class="gloss-content hidden space-y-3 text-sm leading-relaxed">
+        <div><b>День цикла</b> — счёт с 1-го дня месячных. Если сегодня первый день месячных, это 1-й день цикла.</div>
+        <div><b>Фертильное окно</b> — дни, когда вероятность зачать высока: 5 дней до овуляции, сам день овуляции и 1 день после. Сперматозоиды живут до 5 дней, поэтому «до» тоже важно.</div>
+        <div><b>Овуляция</b> — выход яйцеклетки. Живёт ~24 часа. Приложение ставит её по формуле: прогноз следующих месячных − 14 дней (или ваша персональная лютеиновая фаза, если данных достаточно).</div>
+        <div><b>ПМС</b> — предменструальный синдром. Симптомы за 3–7 дней до месячных: вздутие, раздражительность, грусть, тяга к сладкому. Связан с падением прогестерона. Это норма, не диагноз.</div>
+        <div><b>Регулярность</b> — насколько одинаковы длины циклов. Если разброс ≤2 дней — стабильный. 3–7 — умеренно (норма в вашем возрасте). >7 — нерегулярный, стоит обсудить с врачом.</div>
+        <div><b>Доверительный интервал</b> — прогноз не одной датой, а диапазоном. Например, «12–15 ноября» значит, что месячные с высокой вероятностью придут в этом окне.</div>
+        <div><b>Уровень уверенности</b> — 🟢 высокая (стабильный цикл, много данных), 🟡 средняя (мало данных или умеренный разброс), 🔴 низкая (мало данных или большой разброс).</div>
+      </div>
+
+      <div id="gloss-age" class="gloss-content hidden space-y-3 text-sm leading-relaxed">
+        <div class="p-3 rounded-xl" style="background:rgba(182,227,200,.2)">
+          <div class="font-bold mb-1" style="color:#2a6a4a">В вашем возрасте (34–35 лет)</div>
+          <p>Фертильность в норме — до 35–37 запас яйцеклеток ещё хороший. Многие женщины рожают первого ребёнка в 35–40. Циклы часто даже стабильнее, чем в 20 — гормональный фон ровнее.</p>
+        </div>
+        <div>
+          <b>Норма вариабельности:</b> для 35–44 лет разброс до <b>±7 дней</b> между циклами — норма. Приложение учитывает это и не пугает «нерегулярностью» зря.
+        </div>
+        <div>
+          <b>Что может меняться с возрастом:</b>
+          <ul class="list-disc ml-5 mt-1 space-y-1">
+            <li>Вариабельность может немного расти</li>
+            <li>Лютеиновая фаза может чуть сокращаться</li>
+            <li>ПМС может усиливаться</li>
+            <li>Вероятность зачатия за цикл — ~15% (в 20 лет было ~25%)</li>
+          </ul>
+        </div>
+        <div>
+          <b>Когда стоит к врачу:</b> задержка >14 дней без беременности, циклы >45 дней, очень обильные или очень скудные месячные, резкая смена паттерна. Это не «всё плохо», а повод проверить.
+        </div>
+        <div class="text-xs opacity-70">
+          Пременопауза обычно начинается в 45–50, не в 35. До неё ещё 10–15 лет.
+        </div>
+      </div>
+
+      <div id="gloss-how" class="gloss-content hidden space-y-3 text-sm leading-relaxed">
+        <div><b>Средняя длина цикла</b> — взвешенное среднее последних циклов. Свежие циклы весят больше (коэффициенты 1, 1.5, 2), поэтому если ваш цикл меняется, прогноз быстро адаптируется.</div>
+        <div><b>Прогноз следующих месячных</b> — дата последних месячных + средняя длина. Показывается с диапазоном (± разброс) и уровнем уверенности.</div>
+        <div><b>Овуляция</b> — прогноз следующих месячных − 14 дней (или ваша персональная лютеиновая фаза, если данных ≥3 циклов).</div>
+        <div><b>Фертильное окно</b> — овуляция − 5 … овуляция + 1 (7 дней).</div>
+        <div><b>Безопасные дни</b> — все остальные дни, кроме месячных и фертильного окна.</div>
+        <div><b>Регулярность</b> — стандартное отклонение длин циклов. Чем меньше — тем стабильнее.</div>
+        <div><b>Всё считается локально</b> — данные не уходят с устройства, никаких серверов.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- СИМУЛЯТОР "А ЧТО ЕСЛИ" -->
+  <div id="whatif-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="rounded-3xl w-full max-w-md p-5 max-h-[85vh] overflow-y-auto shadow-2xl" style="background:#fff">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg">🔮 А что если?</h3>
+        <button id="whatif-close" class="p-1 rounded-full active:scale-90"><i data-lucide="x" class="w-5 h-5" style="color:var(--text-sub)"></i></button>
+      </div>
+
+      <p class="text-xs mb-4" style="color:var(--text-sub)">
+        Смоделируйте ситуацию: «если следующий цикл будет X дней». Увидите, как сдвинутся прогноз, овуляция и ПМС.
+      </p>
+
+      <div class="mb-4">
+        <div class="flex justify-between text-sm mb-2">
+          <span>Длина следующего цикла:</span>
+          <b id="whatif-value">28 дн.</b>
+        </div>
+        <input type="range" id="whatif-slider" min="18" max="45" value="28" class="w-full" />
+        <div class="flex justify-between text-xs mt-1" style="color:var(--text-sub)">
+          <span>18</span><span>45</span>
+        </div>
+      </div>
+
+      <div class="space-y-2 text-sm">
+        <div class="p-3 rounded-xl" style="background:rgba(249,198,211,.2)">
+          <div class="text-xs mb-1" style="color:var(--text-sub)">Следующие месячные:</div>
+          <div class="font-semibold" id="whatif-next">—</div>
+        </div>
+        <div class="p-3 rounded-xl" style="background:rgba(240,198,116,.2)">
+          <div class="text-xs mb-1" style="color:var(--text-sub)">Овуляция:</div>
+          <div class="font-semibold" id="whatif-ovu">—</div>
+        </div>
+        <div class="p-3 rounded-xl" style="background:rgba(168,216,234,.2)">
+          <div class="text-xs mb-1" style="color:var(--text-sub)">Фертильное окно:</div>
+          <div class="font-semibold" id="whatif-fertile">—</div>
+        </div>
+        <div class="p-3 rounded-xl" style="background:rgba(240,201,116,.15)">
+          <div class="text-xs mb-1" style="color:var(--text-sub)">Ожидаемый ПМС (если есть история):</div>
+          <div class="font-semibold" id="whatif-pms">—</div>
+        </div>
+      </div>
+
+      <p class="text-[11px] mt-4" style="color:var(--text-sub)">
+        💡 Симуляция не сохраняется — это только для понимания. Реальные прогнозы считаются по вашим данным.
+      </p>
+    </div>
+  </div>
+
+  <script>
+  // ============================================================
+  // КОНСТАНТЫ
+  // ============================================================
+  const BIRTH_DATE = '1991-11-25'; // зашита
+
+  function calcAge() {
+    const today = new Date();
+    const [y, m, d] = BIRTH_DATE.split('-').map(Number);
+    let age = today.getFullYear() - y;
+    const beforeBday = (today.getMonth() + 1 < m) || (today.getMonth() + 1 === m && today.getDate() < d);
+    if (beforeBday) age--;
+    return age;
+  }
+
+  function ageVariabilityLimit() {
+    const a = calcAge();
+    if (a < 35) return 5;
+    if (a < 45) return 7;
+    return 10;
+  }
+
+  // ============================================================
+  // 1. IndexedDB
+  // ============================================================
+  const DB_NAME = 'PeriodTrackerDB', DB_VERSION = 1;
+  let db = null;
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains('cycles')) {
+          const s = d.createObjectStore('cycles', { keyPath: 'id', autoIncrement: true });
+          s.createIndex('start_date', 'start_date', { unique: false });
+        }
+        if (!d.objectStoreNames.contains('daily_logs')) {
+          d.createObjectStore('daily_logs', { keyPath: 'date' });
+        }
+      };
+      req.onsuccess = () => { db = req.result; resolve(db); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+  const tx = (n, m = 'readonly') => db.transaction(n, m).objectStore(n);
+  const dbGetAll = (n) => new Promise((res, rej) => { const r = tx(n).getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); });
+  const dbGet = (n, k) => new Promise((res, rej) => { const r = tx(n).get(k); r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error); });
+  const dbPut = (n, v) => new Promise((res, rej) => { const r = tx(n, 'readwrite').put(v); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const dbDelete = (n, k) => new Promise((res, rej) => { const r = tx(n, 'readwrite').delete(k); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+  const dbClear = (n) => new Promise((res, rej) => { const r = tx(n, 'readwrite').clear(); r.onsuccess = () => res(); r.onerror = () => rej(r.error); });
+
+  // ============================================================
+  // 2. Даты
+  // ============================================================
+  const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const parseISO = (s) => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d, 12); };
+  const diffDays = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 86400000);
+  const addDays = (iso, days) => { const d = parseISO(iso); d.setDate(d.getDate() + days); return toISO(d); };
+  const todayISO = () => toISO(new Date());
+  const fmtRu = (iso) => parseISO(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+
+  // ============================================================
+  // 3. Математика
+  // ============================================================
+  async function getSortedCycles() {
+    const all = await dbGetAll('cycles');
+    return all.sort((a, b) => a.start_date.localeCompare(b.start_date));
+  }
+
+  // Взвешенное среднее: свежие циклы важнее
+  function weightedAvgCycle(cycles) {
+    if (cycles.length < 2) return 28;
+    const lens = [];
+    for (let i = 1; i < cycles.length; i++) lens.push(diffDays(cycles[i-1].start_date, cycles[i].start_date));
+    const last = lens.slice(-3);
+    const weights = [1, 1.5, 2];
+    let sum = 0, wsum = 0;
+    last.forEach((v, i) => { const w = weights[i] || 1; sum += v * w; wsum += w; });
+    return sum / wsum;
+  }
+
+  // Стандартное отклонение
+  function stdev(arr) {
+    if (arr.length < 2) return 0;
+    const m = arr.reduce((s,x) => s+x, 0) / arr.length;
+    const v = arr.reduce((s,x) => s + (x-m)**2, 0) / arr.length;
+    return Math.sqrt(v);
+  }
+
+  function calcAvgPeriodLength(cycles) {
+    const finished = cycles.filter(c => c.end_date);
+    if (!finished.length) return 5;
+    const lens = finished.map(c => diffDays(c.start_date, c.end_date) + 1);
+    const last3 = lens.slice(-3);
+    return Math.max(1, Math.round(last3.reduce((s,x) => s+x, 0) / last3.length));
+  }
+
+  // Персональная лютеиновая фаза: если есть данные ПМС, считаем; иначе 14
+  function calcLutealPhase() {
+    // простая эвристика: стандарт 14, но если много симптомов в поздние дни — не меняем.
+    // В будущем можно уточнить по данным овуляции, но без тестов на овуляцию — используем 14.
+    return 14;
+  }
+
+  function calcForecast(cycles) {
+    if (!cycles.length) return null;
+    const last = cycles[cycles.length - 1];
+    const avg = weightedAvgCycle(cycles);
+    const avgRound = Math.round(avg);
+
+    // разброс длин
+    const lens = [];
+    for (let i = 1; i < cycles.length; i++) lens.push(diffDays(cycles[i-1].start_date, cycles[i].start_date));
+    const sd = stdev(lens.slice(-3));
+    // доверительный интервал ± (sd или 2, минимум 1)
+    const spread = Math.max(1, Math.round(sd));
+
+    const nextStart = addDays(last.start_date, avgRound);
+    const nextStartMin = addDays(last.start_date, Math.max(1, avgRound - spread));
+    const nextStartMax = addDays(last.start_date, avgRound + spread);
+
+    const luteal = calcLutealPhase();
+    const ovulation = addDays(nextStart, -luteal);
+
+    return {
+      lastStart: last.start_date,
+      lastEnd: last.end_date,
+      nextStart,
+      nextStartMin,
+      nextStartMax,
+      spread,
+      sd,
+      avgCycle: avgRound,
+      avgCycleRaw: avg,
+      ovulation,
+      fertileStart: addDays(ovulation, -5),
+      fertileEnd: addDays(ovulation, 1),
+      avgPeriod: calcAvgPeriodLength(cycles),
+      confidence: calcConfidence(cycles, sd),
+    };
+  }
+
+  function calcConfidence(cycles, sd) {
+    if (cycles.length < 2) return 'low';
+    const limit = ageVariabilityLimit();
+    if (cycles.length >= 3 && sd <= 2) return 'high';
+    if (sd <= limit) return 'med';
+    return 'low';
+  }
+
+  function getDayStatus(iso, cycles, forecast) {
+    for (const c of cycles) {
+      if (c.end_date) { if (iso >= c.start_date && iso <= c.end_date) return 'period'; }
+      else { if (iso >= c.start_date && iso <= todayISO()) return 'period'; }
+    }
+    if (forecast) {
+      const predEnd = addDays(forecast.nextStart, forecast.avgPeriod - 1);
+      if (iso >= forecast.nextStart && iso <= predEnd) return 'period';
+      if (iso === forecast.ovulation) return 'ovulation';
+      if (iso >= forecast.fertileStart && iso <= forecast.fertileEnd) return 'fertile';
+    }
+    return 'safe';
+  }
+
+  // ============================================================
+  // 4. Состояние
+  // ============================================================
+  const SYMPTOM_ICONS = { 'Тянет живот': '🌀', 'Вздутие': '🎈', 'Головная боль': '🤕', 'Прыщи': '🔴' };
+  const MOOD_ICONS    = { 'Отличное': '😊', 'Грусть': '😢', 'Раздражительность': '😤', 'Тревога': '😰' };
+
+  const state = {
+    cycles: [], forecast: null,
+    calMonth: new Date().getMonth(), calYear: new Date().getFullYear(),
+    weightChart: null, cycleChart: null,
+    weightRange: 90, logsMap: {},
+  };
+
+  async function refreshState() {
+    state.cycles = await getSortedCycles();
+    state.forecast = calcForecast(state.cycles);
+    const logs = await dbGetAll('daily_logs');
+    state.logsMap = {};
+    logs.forEach(l => state.logsMap[l.date] = l);
+  }
+
+  async function refreshAll() {
+    await refreshState();
+    await renderHome();
+    await renderCalendar();
+    await renderStats();
+    await renderCyclesList();
+    checkReminder();
+  }
+
+  // ============================================================
+  // 5. Дашборд
+  // ============================================================
+  async function renderHome() {
+    const today = todayISO();
+    document.getElementById('today-label').textContent =
+      new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const ring = document.getElementById('ring-progress');
+    const dayNumEl = document.getElementById('cycle-day-num');
+    const badgeEl = document.getElementById('status-badge');
+    const daysLabel = document.getElementById('days-until-label');
+    const rangeLabel = document.getElementById('forecast-range-label');
+    const confPill = document.getElementById('confidence-pill');
+    const toggleBtn = document.getElementById('period-toggle-btn');
+    const pmsBlock = document.getElementById('pms-forecast');
+
+    const past = state.cycles.filter(c => c.start_date <= today);
+    const current = past[past.length - 1];
+
+    if (!current) {
+      dayNumEl.textContent = '—';
+      badgeEl.textContent = 'Нет данных';
+      badgeEl.className = 'mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500';
+      daysLabel.textContent = 'Нажмите «Месячные начались», чтобы начать';
+      rangeLabel.textContent = '';
+      confPill.textContent = '';
+      confPill.className = 'confidence-pill';
+      ring.style.setProperty('--ring-color', '#e5e7eb');
+      ring.style.setProperty('--ring-pct', '0%');
+      toggleBtn.textContent = 'Месячные начались';
+      toggleBtn.className = 'w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg active:scale-95 transition bg-pink-400';
+      pmsBlock.classList.add('hidden');
+      document.getElementById('home-insights').innerHTML = '';
+      return;
+    }
+
+    const dayOfCycle = diffDays(current.start_date, today) + 1;
+    dayNumEl.textContent = dayOfCycle;
+    const avg = state.forecast ? state.forecast.avgCycle : 28;
+    ring.style.setProperty('--ring-pct', Math.min(100, Math.round((dayOfCycle / avg) * 100)) + '%');
+
+    const status = getDayStatus(today, state.cycles, state.forecast);
+    const map = {
+      period:  { text: 'Месячные',        cls: 'bg-red-100 text-red-600',     color: '#f4a6b6' },
+      fertile: { text: 'Фертильное окно', cls: 'bg-blue-100 text-blue-600',   color: '#a8d8ea' },
+      ovulation:{text: 'Овуляция',        cls: 'bg-amber-100 text-amber-600', color: '#f0c674' },
+      safe:    { text: 'Безопасный день', cls: 'bg-green-100 text-green-600', color: '#b6e3c8' },
+    };
+    const s = map[status];
+    badgeEl.textContent = s.text;
+    badgeEl.className = 'mt-2 px-3 py-1 rounded-full text-xs font-semibold ' + s.cls;
+    ring.style.setProperty('--ring-color', s.color);
+
+    const isActive = current && !current.end_date;
+    toggleBtn.textContent = isActive ? 'Месячные закончились' : 'Месячные начались';
+    toggleBtn.className = 'w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg active:scale-95 transition ' +
+      (isActive ? 'bg-purple-400' : 'bg-pink-400');
+
+    // Прогноз с диапазоном
+    if (state.forecast) {
+      const f = state.forecast;
+      const dl = diffDays(today, f.nextStart);
+      daysLabel.textContent = dl > 0 ? `До следующих месячных: ${dl} дн.`
+        : dl === 0 ? 'Ожидаются сегодня' : `Задержка: ${Math.abs(dl)} дн.`;
+      if (f.spread > 0) {
+        rangeLabel.textContent = `Прогноз: ${fmtRu(f.nextStartMin)} – ${fmtRu(f.nextStartMax)}`;
+      } else {
+        rangeLabel.textContent = `Прогноз: ${fmtRu(f.nextStart)}`;
+      }
+
+      const confMap = {
+        high: { text: '🟢 Высокая точность', cls: 'confidence-pill conf-high' },
+        med:  { text: '🟡 Средняя точность', cls: 'confidence-pill conf-med' },
+        low:  { text: '🔴 Низкая точность',  cls: 'confidence-pill conf-low' },
+      };
+      const cm = confMap[f.confidence];
+      confPill.textContent = cm.text;
+      confPill.className = cm.cls;
+    } else {
+      daysLabel.textContent = 'Прогноз появится после 2-го цикла';
+      rangeLabel.textContent = '';
+      confPill.textContent = '';
+    }
+
+    // ПМС-прогноз
+    const pms = calcPMSForecast();
+    if (pms) {
+      pmsBlock.classList.remove('hidden');
+      pmsBlock.innerHTML = `<b>🩸 ПМС-прогноз:</b> по вашим записям симптомы обычно начинаются с <b>${fmtRu(pms.start)}</b> — за ${pms.days} дн. до месячных.`;
+    } else {
+      pmsBlock.classList.add('hidden');
+    }
+
+    // Инсайты на главной
+    renderHomeInsights(status);
+  }
+
+  function renderHomeInsights(status) {
+    const wrap = document.getElementById('home-insights');
+    const insights = buildInsights('home', status);
+    if (!insights.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = insights.slice(0, 3).map(i =>
+      `<div class="insight"><div class="insight-icon">${i.icon}</div><div>${i.text}</div></div>`
+    ).join('');
+  }
+
+  // ============================================================
+  // 6. Инсайты
+  // ============================================================
+  function buildInsights(scope, todayStatus) {
+    const out = [];
+    const cyc = state.cycles;
+    const f = state.forecast;
+    const today = todayISO();
+    const age = calcAge();
+    const varLimit = ageVariabilityLimit();
+
+    // 1. Стабильность
+    if (cyc.length >= 3) {
+      const lens = [];
+      for (let i = 1; i < cyc.length; i++) lens.push(diffDays(cyc[i-1].start_date, cyc[i].start_date));
+      const sd = stdev(lens.slice(-3));
+      if (sd <= 2) out.push({ icon: '✨', text: `Ваш цикл стабилен: разброс ±${sd.toFixed(1)} дн. за последние 3 цикла. Отличный показатель.` });
+      else if (sd <= varLimit) out.push({ icon: '📊', text: `Разброс цикла ±${sd.toFixed(1)} дн. — это в пределах нормы для вашего возраста (до ±${varLimit} дн.).` });
+      else out.push({ icon: '💭', text: `Разброс цикла ±${sd.toFixed(1)} дн. больше типичного (до ±${varLimit} дн.). Если так уже несколько месяцев — стоит обсудить с гинекологом.` });
+    }
+
+    // 2. Тренд
+    if (cyc.length >= 4) {
+      const lens = [];
+      for (let i = 1; i < cyc.length; i++) lens.push(diffDays(cyc[i-1].start_date, cyc[i].start_date));
+      const first = lens.slice(0, Math.min(3, lens.length));
+      const lastL = lens.slice(-Math.min(3, lens.length));
+      const avgFirst = first.reduce((s,x) => s+x, 0) / first.length;
+      const avgLast = lastL.reduce((s,x) => s+x, 0) / lastL.length;
+      const delta = avgLast - avgFirst;
+      if (Math.abs(delta) >= 2) {
+        out.push({ icon: delta > 0 ? '📈' : '📉', text: `Цикл ${delta > 0 ? 'удлинился' : 'сократился'} примерно на ${Math.abs(delta).toFixed(1)} дн. за период наблюдений. Небольшие сдвиги — норма.` });
+      }
+    }
+
+    // 3. ПМС
+    const pms = calcPMSForecast();
+    if (pms && f) {
+      const dl = diffDays(today, pms.start);
+      if (dl >= 0 && dl <= 3) out.push({ icon: '🌙', text: `Скоро ожидается ПМС — с ${fmtRu(pms.start)}. Это лютеиновая фаза: организм готовится, отсюда вздутие и перепады настроения. Это норма.` });
+    }
+
+    // 4. Вес и фаза
+    const weightInsight = buildWeightPhaseInsight();
+    if (weightInsight) out.push(weightInsight);
+
+    // 5. Лютеиновая фаза
+    if (scope === 'stats' && cyc.length >= 3) {
+      out.push({ icon: '🌙', text: `Лютеиновая фаза (после овуляции) у большинства женщин ~14 дней. Если у вас месячные стабильнее в конце цикла — овуляция точнее считается по вашим данным.` });
+    }
+
+    // 6. Возраст
+    if (scope === 'stats' && age >= 35 && age < 45) {
+      out.push({ icon: '🌸', text: `В вашем возрасте (${age} лет) вариабельность цикла до ±${varLimit} дн. — норма. Приложение оценивает регулярность с учётом этого.` });
+    }
+
+    // 7. Записи симптомов
+    if (scope === 'stats') {
+      const symptomDays = Object.values(state.logsMap).filter(l => (l.symptoms||[]).length > 0 || (l.moods||[]).length > 0).length;
+      if (symptomDays >= 5) {
+        out.push({ icon: '📝', text: `Вы записали симптомы/настроение за ${symptomDays} дней. Чем больше данных — тем точнее карта симптомов ниже.` });
+      }
+    }
+
+    return out;
+  }
+
+  function buildWeightPhaseInsight() {
+    // Проверим: растёт ли вес в лютеиновой фазе и падает с месячными
+    if (!state.forecast || state.cycles.length < 2) return null;
+    const logs = Object.values(state.logsMap).filter(l => l.weight != null);
+    if (logs.length < 6) return null;
+
+    // Сравним средний вес в месячные vs за 3 дня до месячных
+    const periodW = [], preW = [];
+    for (const c of state.cycles) {
+      for (const l of logs) {
+        const d = diffDays(c.start_date, l.date);
+        if (d >= 0 && d <= 4) periodW.push(l.weight);
+        if (d >= -3 && d <= -1) preW.push(l.weight);
+      }
+    }
+    if (periodW.length < 2 || preW.length < 2) return null;
+    const avgP = periodW.reduce((s,x) => s+x, 0) / periodW.length;
+    const avgPre = preW.reduce((s,x) => s+x, 0) / preW.length;
+    const delta = avgPre - avgP;
+    if (Math.abs(delta) >= 0.5) {
+      return {
+        icon: '⚖️',
+        text: `Перед месячными вес в среднем ${delta > 0 ? 'выше' : 'ниже'} на ${Math.abs(delta).toFixed(1)} кг, чем во время. Это ${delta > 0 ? 'задержка воды — норма, уйдёт с месячными' : 'индивидуальная особенность'}.`,
+      };
+    }
+    return null;
+  }
+
+  function calcPMSForecast() {
+    // Смотрим: за сколько дней до месячных обычно появляются симптомы
+    const logs = Object.values(state.logsMap);
+    if (!logs.length || !state.cycles.length) return null;
+
+    let totalDaysBefore = 0, count = 0;
+    for (const c of state.cycles) {
+      for (const l of logs) {
+        if (l.date >= c.start_date) continue;
+        if ((l.symptoms||[]).length || (l.moods||[]).length) {
+          const daysBefore = diffDays(l.date, c.start_date);
+          if (daysBefore > 0 && daysBefore <= 10) { totalDaysBefore += daysBefore; count++; }
+        }
+      }
+    }
+    if (count < 3) return null;
+    const avgBefore = Math.round(totalDaysBefore / count);
+
+    const today = todayISO();
+    const f = state.forecast;
+    if (!f) return null;
+    const pmsStart = addDays(f.nextStart, -avgBefore);
+    // Показываем если ПМС ещё впереди
+    return { start: pmsStart, days: avgBefore, upcoming: pmsStart >= today };
+  }
+
+  // ============================================================
+  // 7. Календарь
+  // ============================================================
+  async function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    const label = document.getElementById('cal-month-label');
+    const year = state.calYear, month = state.calMonth;
+    label.textContent = new Date(year, month, 1).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+    grid.innerHTML = '';
+    const firstDay = new Date(year, month, 1);
+    const startWd = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevDays = new Date(year, month, 0).getDate();
+    const today = todayISO();
+    const total = Math.ceil((startWd + daysInMonth) / 7) * 7;
+
+    for (let i = 0; i < total; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-day text-gray-400';
+      let dayNum, iso, other = false;
+      if (i < startWd) { dayNum = prevDays - startWd + i + 1; iso = toISO(new Date(year, month - 1, dayNum)); other = true; }
+      else if (i < startWd + daysInMonth) { dayNum = i - startWd + 1; iso = toISO(new Date(year, month, dayNum)); }
+      else { dayNum = i - startWd - daysInMonth + 1; iso = toISO(new Date(year, month + 1, dayNum)); other = true; }
+
+      cell.textContent = dayNum;
+      if (other) cell.classList.add('other-month');
+      if (iso === today) cell.classList.add('today');
+      const status = getDayStatus(iso, state.cycles, state.forecast);
+      if (status === 'period') cell.classList.add('period');
+      else if (status === 'fertile') cell.classList.add('fertile');
+      else if (status === 'ovulation') { cell.classList.add('fertile'); cell.classList.add('ovulation'); }
+      else cell.classList.add('safe');
+
+      const log = state.logsMap[iso];
+      if (log && !other) {
+        const markers = [];
+        (log.symptoms || []).forEach(s => SYMPTOM_ICONS[s] && markers.push(SYMPTOM_ICONS[s]));
+        (log.moods || []).forEach(m => MOOD_ICONS[m] && markers.push(MOOD_ICONS[m]));
+        if (log.weight != null) markers.push('⚖️');
+        if (log.notes) markers.push('📝');
+        if (markers.length) {
+          const wrap = document.createElement('div');
+          wrap.className = 'cal-markers';
+          const shown = markers.slice(0, 3).join('');
+          const extra = markers.length > 3 ? `<span>+${markers.length - 3}</span>` : '';
+          wrap.innerHTML = `<span>${shown}</span>${extra}`;
+          cell.appendChild(wrap);
+        }
+      }
+      cell.addEventListener('click', () => openModal(iso));
+      grid.appendChild(cell);
+    }
+  }
+
+  // ============================================================
+  // 8. Статистика
+  // ============================================================
+  async function renderStats() {
+    const f = state.forecast;
+    document.getElementById('stat-avg-cycle').textContent = f ? f.avgCycle : 28;
+    document.getElementById('stat-avg-period').textContent = f ? f.avgPeriod : 5;
+
+    // Регулярность
+    const cyc = state.cycles;
+    const lenArr = [];
+    for (let i = 1; i < cyc.length; i++) lenArr.push(diffDays(cyc[i-1].start_date, cyc[i].start_date));
+    const sd = stdev(lenArr.slice(-3));
+    const varLimit = ageVariabilityLimit();
+    const regLabel = document.getElementById('regularity-label');
+    const regDesc = document.getElementById('regularity-desc');
+    const regBar = document.getElementById('regularity-bar').children;
+    [0,1,2].forEach(i => regBar[i].classList.remove('active'));
+
+    if (cyc.length < 3) {
+      regLabel.textContent = '—';
+      regDesc.textContent = 'Нужно минимум 3 цикла для оценки.';
+    } else if (sd <= 2) {
+      regLabel.textContent = 'Стабильный';
+      regBar[2].classList.add('active');
+      regDesc.innerHTML = `Разброс ±${sd.toFixed(1)} дн. Отличный показатель. <span class="help-btn" data-help="regularity">?</span>`;
+    } else if (sd <= varLimit) {
+      regLabel.textContent = 'Умеренный';
+      regBar[1].classList.add('active');
+      regDesc.innerHTML = `Разброс ±${sd.toFixed(1)} дн. — в пределах нормы для вашего возраста (до ±${varLimit} дн.).`;
+    } else {
+      regLabel.textContent = 'Нерегулярный';
+      regBar[0].classList.add('active');
+      regDesc.innerHTML = `Разброс ±${sd.toFixed(1)} дн. больше типичного (до ±${varLimit} дн.). Если так несколько месяцев — обсудите с гинекологом. Это не диагноз, а повод проверить.`;
+    }
+    if (window.lucide) lucide.createIcons();
+
+    // Инсайты
+    const insights = buildInsights('stats');
+    const insWrap = document.getElementById('stats-insights');
+    if (insights.length) {
+      insWrap.innerHTML = insights.map(i =>
+        `<div class="insight"><div class="insight-icon">${i.icon}</div><div>${i.text}</div></div>`
+      ).join('');
+    } else {
+      insWrap.innerHTML = '<p class="text-xs text-center py-2" style="color:var(--text-sub)">Добавьте больше записей — появятся персональные наблюдения.</p>';
+    }
+
+    // Вес
+    document.querySelectorAll('#weight-range-tabs button').forEach(b => {
+      b.classList.toggle('active', b.dataset.range === String(state.weightRange));
+    });
+    const logs = await dbGetAll('daily_logs');
+    const cutoff = state.weightRange === 'all' ? '0000-01-01' : addDays(todayISO(), -parseInt(state.weightRange));
+    const weightLogs = logs.filter(l => l.weight != null && l.date >= cutoff).sort((a,b) => a.date.localeCompare(b.date));
+
+    const cCanvas = document.getElementById('weight-chart');
+    const cEmpty = document.getElementById('weight-empty');
+    if (!weightLogs.length) {
+      cEmpty.classList.remove('hidden'); cCanvas.style.display = 'none';
+      if (state.weightChart) { state.weightChart.destroy(); state.weightChart = null; }
+    } else {
+      cEmpty.classList.add('hidden'); cCanvas.style.display = 'block';
+      const labels = weightLogs.map(l => {
+        const d = parseISO(l.date);
+        if (state.weightRange === 'all' || parseInt(state.weightRange) > 180)
+          return d.toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' });
+        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+      });
+      const values = weightLogs.map(l => l.weight);
+      if (state.weightChart) state.weightChart.destroy();
+      state.weightChart = new Chart(cCanvas.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets: [{
+          label: 'Вес', data: values,
+          borderColor: '#d8a5c9', backgroundColor: 'rgba(216,165,201,0.15)',
+          tension: 0.3, fill: true,
+          pointRadius: weightLogs.length > 60 ? 0 : 3,
+          pointBackgroundColor: '#d0537a',
+        }]},
+        options: {
+          responsive: true, plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: false, ticks: { callback: v => v + ' кг' } },
+            x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+          }
+        }
+      });
+    }
+
+    // Длительность циклов
+    const cycleLens = [];
+    for (let i = 1; i < cyc.length; i++) cycleLens.push({ label: cyc[i].start_date.slice(5), value: diffDays(cyc[i-1].start_date, cyc[i].start_date) });
+    const ccCanvas = document.getElementById('cycle-chart');
+    const ccEmpty = document.getElementById('cycle-empty');
+    const trendText = document.getElementById('cycle-trend-text');
+
+    if (!cycleLens.length) {
+      ccEmpty.classList.remove('hidden'); ccCanvas.style.display = 'none';
+      trendText.textContent = '';
+      if (state.cycleChart) { state.cycleChart.destroy(); state.cycleChart = null; }
+    } else {
+      ccEmpty.classList.add('hidden'); ccCanvas.style.display = 'block';
+      const avgLine = f ? f.avgCycle : 28;
+      if (state.cycleChart) state.cycleChart.destroy();
+      state.cycleChart = new Chart(ccCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: cycleLens.map(c => c.label),
+          datasets: [{
+            label: 'Длина, дней',
+            data: cycleLens.map(c => c.value),
+            backgroundColor: cycleLens.map(c => Math.abs(c.value - avgLine) <= 2 ? 'rgba(184,227,200,0.8)' : 'rgba(244,166,182,0.8)'),
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true, plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: false, suggestedMin: Math.max(10, avgLine - 8), suggestedMax: avgLine + 8 } }
+        }
+      });
+
+      // Текст тренда
+      if (cycleLens.length >= 3) {
+        const first = cycleLens.slice(0, Math.min(3, cycleLens.length));
+        const lastL = cycleLens.slice(-Math.min(3, cycleLens.length));
+        const a1 = first.reduce((s,c) => s+c.value, 0) / first.length;
+        const a2 = lastL.reduce((s,c) => s+c.value, 0) / lastL.length;
+        const d = a2 - a1;
+        if (Math.abs(d) < 1) trendText.innerHTML = `Тренд: стабильно (≈${a2.toFixed(1)} дн.). <span style="color:#3d9970">Хорошо.</span>`;
+        else if (d > 0) trendText.innerHTML = `Тренд: удлиняется на ~${Math.abs(d).toFixed(1)} дн. Небольшие сдвиги — норма.`;
+        else trendText.innerHTML = `Тренд: сокращается на ~${Math.abs(d).toFixed(1)} дн. Небольшие сдвиги — норма.`;
+      } else trendText.textContent = '';
+    }
+
+    // Heatmap
+    renderHeatmap();
+
+    // Прогноз vs Факт
+    renderPFTable();
+  }
+
+  function renderHeatmap() {
+    const wrap = document.getElementById('heatmap-wrap');
+    const cyc = state.cycles;
+    if (cyc.length < 2) {
+      wrap.innerHTML = '<p class="text-xs text-center py-2" style="color:var(--text-sub)">Нужно минимум 2 цикла с записями.</p>';
+      return;
+    }
+    const allSymptoms = new Set(), allMoods = new Set();
+    Object.values(state.logsMap).forEach(l => {
+      (l.symptoms || []).forEach(s => allSymptoms.add(s));
+      (l.moods || []).forEach(m => allMoods.add(m));
+    });
+    const rows = [...allSymptoms, ...allMoods];
+    if (!rows.length) {
+      wrap.innerHTML = '<p class="text-xs text-center py-2" style="color:var(--text-sub)">Нет записанных симптомов или настроений.</p>';
+      return;
+    }
+
+    // Для каждого симптома/настроения — по дням цикла (1..макс 32)
+    const maxDay = 32;
+    const counts = {};
+    rows.forEach(r => counts[r] = new Array(maxDay + 1).fill(0));
+    let totalCyclesWithLogs = 0;
+
+    for (let i = 0; i < cyc.length; i++) {
+      const start = cyc[i].start_date;
+      const end = cyc[i + 1] ? cyc[i+1].start_date : todayISO();
+      let hasData = false;
+      for (const l of Object.values(state.logsMap)) {
+        if (l.date < start || l.date > end) continue;
+        hasData = true;
+        const day = diffDays(start, l.date) + 1;
+        if (day < 1 || day > maxDay) continue;
+        (l.symptoms || []).forEach(s => counts[s][day]++);
+        (l.moods || []).forEach(m => counts[m][day]++);
+      }
+      if (hasData) totalCyclesWithLogs++;
+    }
+
+    const maxCount = Math.max(1, ...rows.flatMap(r => counts[r]));
+
+    // Собираем HTML
+    let html = '<div style="overflow-x:auto"><div style="min-width:600px">';
+    html += '<div class="heat-grid" style="grid-template-columns: 90px repeat(16, 1fr); margin-bottom:4px">';
+    html += '<div></div>';
+    for (let d = 1; d <= 16; d++) html += `<div class="text-[9px] text-center" style="color:var(--text-sub)">${d}</div>`;
+    html += '</div>';
+    for (const r of rows) {
+      html += '<div class="heat-grid" style="grid-template-columns: 90px repeat(16, 1fr); margin-bottom:2px">';
+      html += `<div class="text-[10px] truncate" style="color:var(--text-sub); padding-right:4px">${r}</div>`;
+      for (let d = 1; d <= 16; d++) {
+        const c = counts[r][d];
+        const opacity = c === 0 ? 0.05 : 0.2 + (c / maxCount) * 0.8;
+        const isMood = Object.prototype.hasOwnProperty.call(MOOD_ICONS, r);
+        const color = isMood ? '168,216,234' : '244,166,182';
+        html += `<div class="heat-cell" style="background: rgba(${color}, ${opacity})" title="${r} — день ${d}: ${c} раз"></div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div></div>';
+    html += `<p class="text-[10px] mt-2" style="color:var(--text-sub)">Показаны дни 1–16. Чем ярче — тем чаще. Розовые — симптомы, голубые — настроения.</p>`;
+    wrap.innerHTML = html;
+  }
+
+  function renderPFTable() {
+    const wrap = document.getElementById('pf-table-wrap');
+    const cyc = state.cycles;
+    if (cyc.length < 2) {
+      wrap.innerHTML = '<p class="text-xs text-center py-4" style="color:var(--text-sub)">Пока нет завершённых циклов</p>';
+      return;
+    }
+    const rows = [];
+    for (let i = 1; i < cyc.length; i++) {
+      const prev = cyc.slice(0, i);
+      let predicted;
+      if (prev.length < 2) predicted = 28;
+      else {
+        const lens = [];
+        for (let j = 1; j < prev.length; j++) lens.push(diffDays(prev[j-1].start_date, prev[j].start_date));
+        const last3 = lens.slice(-3);
+        predicted = Math.round(last3.reduce((s,x) => s+x, 0) / last3.length);
+      }
+      const actual = diffDays(cyc[i-1].start_date, cyc[i].start_date);
+      rows.push({ date: cyc[i].start_date, predicted, actual, delta: actual - predicted });
+    }
+    const show = rows.slice(-6).reverse();
+    let html = `<table class="pf-table"><thead><tr>
+      <th>Цикл с</th><th>Прогноз</th><th>Факт</th><th>Δ</th>
+    </tr></thead><tbody>`;
+    for (const r of show) {
+      const cls = Math.abs(r.delta) <= 2 ? 'pf-ok' : 'pf-warn';
+      const sign = r.delta > 0 ? '+' : '';
+      html += `<tr><td>${r.date}</td><td>${r.predicted} дн.</td><td>${r.actual} дн.</td><td class="${cls}">${sign}${r.delta}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  // ============================================================
+  // 9. История циклов
+  // ============================================================
+  async function renderCyclesList() {
+    const cycles = await getSortedCycles();
+    const box = document.getElementById('cycles-list');
+    if (!cycles.length) {
+      box.innerHTML = '<p class="text-xs" style="color:var(--text-sub)">Пока нет записей</p>';
+      return;
+    }
+    box.innerHTML = '';
+    [...cycles].reverse().forEach(c => {
+      const dur = c.end_date ? diffDays(c.start_date, c.end_date) + 1 : '—';
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between rounded-xl px-3 py-2';
+      row.style.background = 'rgba(0,0,0,.04)';
+      row.innerHTML = `
+        <div class="text-xs">
+          <div class="font-semibold">${c.start_date} → ${c.end_date || 'идёт'}</div>
+          <div style="color:var(--text-sub)">длительность: ${dur} дн.</div>
+        </div>
+        <button class="p-1.5 rounded-lg active:scale-90 transition" style="color:#d0537a" data-del-id="${c.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>`;
+      box.appendChild(row);
+    });
+    box.querySelectorAll('[data-del-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Удалить этот цикл?')) return;
+        await dbDelete('cycles', parseInt(btn.dataset.delId));
+        await refreshAll();
+      });
+    });
+  }
+
+  // ============================================================
+  // 10. Toggle месячных
+  // ============================================================
+  async function togglePeriod() {
+    const today = todayISO();
+    const cycles = await getSortedCycles();
+    const last = cycles[cycles.length - 1];
+    if (last && !last.end_date) {
+      last.end_date = today;
+      await dbPut('cycles', last);
+      const log = await dbGet('daily_logs', today);
+      if (log) { log.is_period = false; await dbPut('daily_logs', log); }
+    } else {
+      if (!(last && last.start_date === today)) await dbPut('cycles', { start_date: today, end_date: null });
+      let log = await dbGet('daily_logs', today);
+      if (!log) log = { date: today, weight: null, symptoms: [], moods: [], is_period: true, notes: '' };
+      else log.is_period = true;
+      await dbPut('daily_logs', log);
+    }
+    await refreshAll();
+  }
+
+  // ============================================================
+  // 11. Модалка
+  // ============================================================
+  let modalDate = null;
+  async function openModal(iso) {
+    modalDate = iso;
+    const overlay = document.getElementById('modal-overlay');
+    document.getElementById('modal-title').textContent =
+      'Запись за ' + parseISO(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('input-weight').value = '';
+    document.getElementById('input-notes').value = '';
+    document.querySelectorAll('[data-group]').forEach(cb => cb.checked = false);
+
+    const log = await dbGet('daily_logs', iso);
+    const preview = document.getElementById('existing-log-preview');
+    const previewC = document.getElementById('preview-content');
+    if (log) {
+      if (log.weight != null) document.getElementById('input-weight').value = log.weight;
+      document.getElementById('input-notes').value = log.notes || '';
+      document.querySelectorAll('[data-group="symptoms"]').forEach(cb => cb.checked = (log.symptoms || []).includes(cb.value));
+      document.querySelectorAll('[data-group="moods"]').forEach(cb => cb.checked = (log.moods || []).includes(cb.value));
+      const parts = [];
+      if (log.weight != null) parts.push(`⚖️ ${log.weight} кг`);
+      if (log.symptoms?.length) parts.push(`🤒 ${log.symptoms.join(', ')}`);
+      if (log.moods?.length) parts.push(`💭 ${log.moods.join(', ')}`);
+      if (log.notes) parts.push(`📝 ${log.notes.slice(0, 80)}${log.notes.length > 80 ? '…' : ''}`);
+      if (log.is_period) parts.push('🩸 день месячных');
+      if (parts.length) { previewC.innerHTML = parts.map(p => `<div>${p}</div>`).join(''); preview.classList.remove('hidden'); }
+      else preview.classList.add('hidden');
+    } else preview.classList.add('hidden');
+
+    await refreshCycleActions(iso);
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    if (window.lucide) lucide.createIcons();
+  }
+  function closeModal() {
+    const o = document.getElementById('modal-overlay');
+    o.classList.add('hidden'); o.classList.remove('flex');
+  }
+  async function refreshCycleActions(iso) {
+    const cycles = await getSortedCycles();
+    const asStart = cycles.find(c => c.start_date === iso);
+    const asEnd = cycles.find(c => c.end_date === iso);
+    const active = cycles.find(c => !c.end_date);
+    const box = document.getElementById('cycle-actions');
+    const bStart = document.getElementById('btn-delete-start');
+    const bCancel = document.getElementById('btn-cancel-end');
+    const bAdd = document.getElementById('btn-add-end');
+    bStart.classList.add('hidden'); bCancel.classList.add('hidden'); bAdd.classList.add('hidden');
+    box.classList.add('hidden');
+    let show = false;
+    if (asStart) { bStart.classList.remove('hidden'); show = true; }
+    if (asEnd) { bCancel.classList.remove('hidden'); show = true; }
+    if (active && iso > active.start_date && !asEnd) { bAdd.classList.remove('hidden'); show = true; }
+    if (show) box.classList.remove('hidden');
+  }
+  async function saveModal() {
+    if (!modalDate) return;
+    const wStr = document.getElementById('input-weight').value.trim();
+    const weight = wStr ? parseFloat(wStr) : null;
+    const notes = document.getElementById('input-notes').value.trim();
+    const symptoms = [...document.querySelectorAll('[data-group="symptoms"]:checked')].map(c => c.value);
+    const moods = [...document.querySelectorAll('[data-group="moods"]:checked')].map(c => c.value);
+    const existing = await dbGet('daily_logs', modalDate);
+    const is_period = existing ? existing.is_period : false;
+    await dbPut('daily_logs', { date: modalDate, weight: isNaN(weight) ? null : weight, symptoms, moods, is_period, notes });
+    localStorage.setItem('lastWeightEntry', todayISO());
+    closeModal();
+    await refreshAll();
+  }
+
+  // ============================================================
+  // 12. Экспорт / Импорт
+  // ============================================================
+  async function exportData() {
+    const data = { app: 'PeriodTrackerDB', version: 1, exported_at: new Date().toISOString(), cycles: await dbGetAll('cycles'), daily_logs: await dbGetAll('daily_logs') };
+    downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `period-backup-${todayISO()}.json`);
+  }
+  function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  async function exportCSV() {
+    const logs = (await dbGetAll('daily_logs')).sort((a,b) => a.date.localeCompare(b.date));
+    const cycles = await getSortedCycles();
+    const h1 = ['Дата','Вес','Симптомы','Настроение','Месячные','Заметки'];
+    const rows1 = logs.map(l => [l.date, l.weight ?? '', (l.symptoms||[]).join('; '), (l.moods||[]).join('; '), l.is_period ? 'да' : 'нет', (l.notes||'').replace(/"/g, '""')]);
+    const h2 = ['Начало','Конец','Длительность (дн.)'];
+    const rows2 = cycles.map(c => [c.start_date, c.end_date || '', c.end_date ? diffDays(c.start_date, c.end_date) + 1 : '']);
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const mk = (h, rows) => [h.map(esc).join(','), ...rows.map(r => r.map(esc).join(','))].join('\r\n');
+    const full = '\uFEFF' + '=== Дневные записи ===\r\n' + mk(h1, rows1) + '\r\n\r\n=== Циклы ===\r\n' + mk(h2, rows2);
+    downloadBlob(new Blob([full], { type: 'text/csv;charset=utf-8' }), `period-data-${todayISO()}.csv`);
+  }
+  async function encryptBackup() {
+    const password = prompt('Придумайте пароль (не забудьте!):');
+    if (!password) return;
+    const password2 = prompt('Повторите пароль:');
+    if (password !== password2) { alert('Пароли не совпадают'); return; }
+    const data = { app: 'PeriodTrackerDB', version: 1, exported_at: new Date().toISOString(), cycles: await dbGetAll('cycles'), daily_logs: await dbGetAll('daily_logs') };
+    const json = JSON.stringify(data);
+    const enc = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const km = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(json));
+    const b64 = (u8) => btoa(String.fromCharCode(...u8));
+    const payload = { encrypted: true, version: 1, kdf: 'PBKDF2-SHA256', iterations: 200000, salt: b64(salt), iv: b64(iv), ciphertext: b64(new Uint8Array(ct)) };
+    downloadBlob(new Blob([JSON.stringify(payload)], { type: 'application/json' }), `period-backup-encrypted-${todayISO()}.json`);
+  }
+  async function decryptBackup(obj, password) {
+    const b64d = (s) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+    const enc = new TextEncoder();
+    const km = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64d(obj.salt), iterations: obj.iterations, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(obj.iv) }, key, b64d(obj.ciphertext));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  async function importData(file) {
+    try {
+      let data = JSON.parse(await file.text());
+      if (data.encrypted) {
+        const pwd = prompt('Пароль от зашифрованного бэкапа:');
+        if (!pwd) return;
+        try { data = await decryptBackup(data, pwd); }
+        catch (e) { alert('Неверный пароль или повреждённый файл'); return; }
+      }
+      if (!data.cycles || !data.daily_logs) throw new Error('Неверный формат');
+      if (!confirm('Перезаписать все текущие данные?')) return;
+      await dbClear('cycles'); await dbClear('daily_logs');
+      for (const c of data.cycles) { const { id, ...rest } = c; await dbPut('cycles', rest); }
+      for (const l of data.daily_logs) await dbPut('daily_logs', l);
+      await refreshAll();
+      alert('Импорт завершён ✅');
+    } catch (e) { alert('Ошибка импорта: ' + e.message); }
+  }
+
+  // ============================================================
+  // 13. Напоминание
+  // ============================================================
+  function checkReminder() {
+    const banner = document.getElementById('reminder-banner');
+    const text = document.getElementById('reminder-text');
+    const dismissedToday = localStorage.getItem('reminderDismissed') === todayISO();
+    if (dismissedToday) { banner.classList.add('hidden'); return; }
+    const last = localStorage.getItem('lastWeightEntry');
+    const today = todayISO();
+    let need = false, msg = 'Пора внести вес';
+    if (!last) { need = true; msg = 'Добавьте свой первый вес ⚖️'; }
+    else {
+      const days = diffDays(last, today);
+      if (days >= 3) { need = true; msg = `Вес не обновлялся ${days} дн. Пора внести ⚖️`; }
+    }
+    if (need) { text.textContent = msg; banner.classList.remove('hidden'); }
+    else banner.classList.add('hidden');
+  }
+
+  // ============================================================
+  // 14. Навигация + свайпы
+  // ============================================================
+  async function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+    if (tab === 'stats') await renderStats();
+    if (tab === 'calendar') await renderCalendar();
+    if (tab === 'home') await renderHome();
+    if (tab === 'settings') await renderCyclesList();
+  }
+  function bindCalendarSwipes() {
+    const el = document.getElementById('calendar-container');
+    let x0 = null, y0 = null, t0 = 0;
+    el.addEventListener('touchstart', (e) => {
+      const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+    }, { passive: true });
+    el.addEventListener('touchend', (e) => {
+      if (x0 == null) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
+      if (dt < 600 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) changeMonth(1); else changeMonth(-1);
+      }
+      x0 = y0 = null;
+    }, { passive: true });
+  }
+  async function changeMonth(delta) {
+    state.calMonth += delta;
+    if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
+    if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
+    await renderCalendar();
+  }
+
+  // ============================================================
+  // 15. Глоссарий
+  // ============================================================
+  function openGlossary() {
+    const o = document.getElementById('glossary-overlay');
+    o.classList.remove('hidden'); o.classList.add('flex');
+    if (window.lucide) lucide.createIcons();
+  }
+  function closeGlossary() {
+    const o = document.getElementById('glossary-overlay');
+    o.classList.add('hidden'); o.classList.remove('flex');
+  }
+  function switchGlossTab(tab) {
+    document.querySelectorAll('.gloss-tab').forEach(t => t.classList.toggle('active', t.dataset.gtab === tab));
+    document.querySelectorAll('.gloss-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('gloss-' + tab).classList.remove('hidden');
+  }
+
+  // ============================================================
+  // 16. Help popover
+  // ============================================================
+  const HELP_TEXTS = {
+    'day-of-cycle': 'Счёт дней цикла начинается с 1-го дня месячных. Если сегодня первый день — это 1-й день.',
+    'forecast': 'Прогноз рассчитывается по вашим данным: свежие циклы весят больше. Показывается диапазон, потому что точная дата зависит от организма.',
+    'confidence': '🟢 Высокая — стабильный цикл и достаточно данных. 🟡 Средняя — небольшой разброс или мало данных. 🔴 Низкая — данных пока мало или цикл нерегулярный.',
+    'fertile': '5 дней до овуляции + день овуляции + 1 день после. Сперматозоиды живут до 5 дней, поэтому дни «до» тоже важны.',
+    'adaptive': 'Средняя длина цикла — взвешенное среднее: последний цикл весит в 2 раза больше, чем 3-й с конца. Так прогноз быстрее адаптируется к изменениям.',
+    'avg-cycle': 'Средняя длина цикла — по последним 3 циклам, взвешенно. По умолчанию 28 дней, если данных мало.',
+    'avg-period': 'Средняя длина менструации — по последним завершённым циклам. По умолчанию 5 дней.',
+    'regularity': 'Регулярность — насколько одинаковы длины циклов. Разброс ≤2 дней — стабильный. 3–7 дней — умеренный (норма для 35+). >7 — стоит обсудить с гинекологом.',
+    'insights': 'Инсайты генерируются автоматически на основе ваших данных: стабильность, тренды, ПМС, связь веса и фазы. Это наблюдения, не медицинские диагнозы.',
+    'weight': 'Вес колеблется по фазам цикла: в лютеиновой фазе (перед месячными) часто +1–2 кг — это задержка воды. С месячными уходит. Не пугайтесь.',
+    'cycle-trend': 'Каждый столбик — длина одного цикла. Зелёные близки к среднему, розовые — отклонение >2 дней. Видно, стабилен ли цикл.',
+    'heatmap': 'Как часто каждый симптом встречается в конкретный день цикла. Помогает увидеть личные паттерны: например, «прыщи стабильно на 22–25-й день».',
+    'pf': 'Сравнение: что алгоритм предсказывал для каждого цикла и что получилось на самом деле. Δ ≤2 дней — зелёное, больше — оранжевое.',
+    'age': 'В 35–44 года разброс цикла до ±7 дней — норма. Приложение оценивает регулярность с учётом возраста, чтобы не пугать зря.',
+  };
+
+  let popoverEl = null;
+  function showHelp(key, anchor) {
+    hideHelp();
+    const text = HELP_TEXTS[key];
+    if (!text) return;
+    popoverEl = document.createElement('div');
+    popoverEl.className = 'help-popover';
+    popoverEl.textContent = text;
+    document.body.appendChild(popoverEl);
+    const r = anchor.getBoundingClientRect();
+    const top = r.bottom + 8;
+    let left = r.left + r.width / 2 - 140;
+    left = Math.max(10, Math.min(left, window.innerWidth - 290));
+    popoverEl.style.top = Math.min(top, window.innerHeight - 200) + 'px';
+    popoverEl.style.left = left + 'px';
+  }
+  function hideHelp() { if (popoverEl) { popoverEl.remove(); popoverEl = null; } }
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-help]');
+    if (btn) { e.stopPropagation(); showHelp(btn.dataset.help, btn); }
+    else if (popoverEl) hideHelp();
+  });
+
+  // ============================================================
+  // 17. Симулятор "А что если"
+  // ============================================================
+  function openWhatIf() {
+    const o = document.getElementById('whatif-overlay');
+    o.classList.remove('hidden'); o.classList.add('flex');
+    const f = state.forecast;
+    const slider = document.getElementById('whatif-slider');
+    slider.value = f ? f.avgCycle : 28;
+    updateWhatIf();
+    if (window.lucide) lucide.createIcons();
+  }
+  function closeWhatIf() {
+    const o = document.getElementById('whatif-overlay');
+    o.classList.add('hidden'); o.classList.remove('flex');
+  }
+  function updateWhatIf() {
+    const val = parseInt(document.getElementById('whatif-slider').value);
+    document.getElementById('whatif-value').textContent = val + ' дн.';
+    if (!state.cycles.length) {
+      ['whatif-next','whatif-ovu','whatif-fertile','whatif-pms'].forEach(id => document.getElementById(id).textContent = '—');
+      return;
+    }
+    const last = state.cycles[state.cycles.length - 1];
+    const nextStart = addDays(last.start_date, val);
+    const ovulation = addDays(nextStart, -14);
+    const fStart = addDays(ovulation, -5);
+    const fEnd = addDays(ovulation, 1);
+    document.getElementById('whatif-next').textContent = fmtRu(nextStart);
+    document.getElementById('whatif-ovu').textContent = fmtRu(ovulation);
+    document.getElementById('whatif-fertile').textContent = `${fmtRu(fStart)} – ${fmtRu(fEnd)}`;
+    const pms = calcPMSForecast();
+    if (pms) {
+      const pmsStart = addDays(nextStart, -pms.days);
+      document.getElementById('whatif-pms').textContent = `с ${fmtRu(pmsStart)} (за ${pms.days} дн.)`;
+    } else {
+      document.getElementById('whatif-pms').textContent = 'Мало данных для ПМС-прогноза';
+    }
+  }
+
+  // ============================================================
+  // 18. Init
+  // ============================================================
+  async function init() {
+    try { await openDB(); } catch (e) { alert('Не удалось открыть БД: ' + e.message); return; }
+    document.getElementById('age-label').textContent = calcAge() + ' лет';
+    await refreshAll();
+    if (window.lucide) lucide.createIcons();
+
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+    document.getElementById('period-toggle-btn').addEventListener('click', togglePeriod);
+    document.getElementById('cal-prev').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('cal-next').addEventListener('click', () => changeMonth(1));
+    bindCalendarSwipes();
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-save').addEventListener('click', saveModal);
+    document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); });
+
+    document.getElementById('btn-delete-start').addEventListener('click', async () => {
+      if (!confirm('Удалить весь цикл, начавшийся ' + modalDate + '?')) return;
+      const cycles = await getSortedCycles();
+      const t = cycles.find(c => c.start_date === modalDate);
+      if (t) await dbDelete('cycles', t.id);
+      const log = await dbGet('daily_logs', modalDate);
+      if (log) { log.is_period = false; await dbPut('daily_logs', log); }
+      closeModal(); await refreshAll();
+    });
+    document.getElementById('btn-cancel-end').addEventListener('click', async () => {
+      const cycles = await getSortedCycles();
+      const t = cycles.find(c => c.end_date === modalDate);
+      if (t) { t.end_date = null; await dbPut('cycles', t); }
+      closeModal(); await refreshAll();
+    });
+    document.getElementById('btn-add-end').addEventListener('click', async () => {
+      const cycles = await getSortedCycles();
+      const a = cycles.find(c => !c.end_date);
+      if (a && modalDate > a.start_date) { a.end_date = modalDate; await dbPut('cycles', a); }
+      closeModal(); await refreshAll();
+    });
+
+    document.getElementById('export-btn').addEventListener('click', exportData);
+    document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
+    document.getElementById('export-encrypted-btn').addEventListener('click', encryptBackup);
+    document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
+    document.getElementById('import-file').addEventListener('change', (e) => { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ''; });
+
+    document.querySelectorAll('#weight-range-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.weightRange = btn.dataset.range === 'all' ? 'all' : parseInt(btn.dataset.range);
+        renderStats();
+      });
+    });
+
+    document.getElementById('reminder-dismiss').addEventListener('click', () => {
+      localStorage.setItem('reminderDismissed', todayISO());
+      document.getElementById('reminder-banner').classList.add('hidden');
+    });
+
+    // Глоссарий
+    document.getElementById('glossary-btn').addEventListener('click', openGlossary);
+    document.getElementById('glossary-close').addEventListener('click', closeGlossary);
+    document.getElementById('glossary-overlay').addEventListener('click', (e) => { if (e.target.id === 'glossary-overlay') closeGlossary(); });
+    document.querySelectorAll('.gloss-tab').forEach(t => t.addEventListener('click', () => switchGlossTab(t.dataset.gtab)));
+
+    // Симулятор
+    document.getElementById('whatif-btn').addEventListener('click', openWhatIf);
+    document.getElementById('whatif-close').addEventListener('click', closeWhatIf);
+    document.getElementById('whatif-overlay').addEventListener('click', (e) => { if (e.target.id === 'whatif-overlay') closeWhatIf(); });
+    document.getElementById('whatif-slider').addEventListener('input', updateWhatIf);
+
+    document.addEventListener('visibilitychange', async () => { if (!document.hidden) await refreshAll(); });
+  }
+
+  window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
